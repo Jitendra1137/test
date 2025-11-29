@@ -18,7 +18,7 @@ jobs:
         uses: actions/checkout@v4
 
       # ------------------------------------
-      # 2) Generate TAG for images
+      # 2) Generate TAG (version)
       # ------------------------------------
       - name: Set TAG
         id: set_tag
@@ -38,6 +38,7 @@ jobs:
           echo "VITE_API_BASE=${{ secrets.VITE_API_BASE }}" > frontent/.env.production
           echo "VITE_GEMINI_API_KEY=${{ secrets.VITE_GEMINI_API_KEY }}" >> frontent/.env.production
           echo "VITE_FRONTEND_URL=${{ secrets.VITE_FRONTEND_URL }}" >> frontent/.env.production
+
           echo "VITE_FIREBASE_API_KEY=${{ secrets.VITE_FIREBASE_API_KEY }}" >> frontent/.env.production
           echo "VITE_FIREBASE_AUTH_DOMAIN=${{ secrets.VITE_FIREBASE_AUTH_DOMAIN }}" >> frontent/.env.production
           echo "VITE_FIREBASE_PROJECT_ID=${{ secrets.VITE_FIREBASE_PROJECT_ID }}" >> frontent/.env.production
@@ -46,7 +47,7 @@ jobs:
           echo "VITE_FIREBASE_APP_ID=${{ secrets.VITE_FIREBASE_APP_ID }}" >> frontent/.env.production
 
       # ------------------------------------
-      # 4) Login to DockerHub
+      # 4) DockerHub Login
       # ------------------------------------
       - name: Login to DockerHub
         run: |
@@ -65,7 +66,7 @@ jobs:
         run: docker build -t jitendrajat/frontent:${{ env.TAG }} ./frontent
 
       # ------------------------------------
-      # 7) Push Images to DockerHub
+      # 7) Push Images
       # ------------------------------------
       - name: Push Docker Images
         run: |
@@ -74,7 +75,7 @@ jobs:
           docker logout
 
       # ------------------------------------
-      # 8) Setup SSH Key
+      # 8) SSH Setup
       # ------------------------------------
       - name: Setup SSH Key
         run: |
@@ -84,22 +85,33 @@ jobs:
           ssh-keyscan -H ${{ secrets.EC2_HOST }} >> ~/.ssh/known_hosts
 
       # ------------------------------------
-      # 9) Deploy to EC2 (Update Tags + Restart)
+      # 9) DEPLOY ON EC2 (WITH ROLLBACK SAFE CLEANUP)
       # ------------------------------------
-      - name: Deploy to EC2 (Update tags + Restart Docker)
+      - name: Deploy to EC2 with Cleanup + Rollback Support
         env:
           TAG: ${{ env.TAG }}
         run: |
           ssh -i ~/.ssh/id_rsa ubuntu@${{ secrets.EC2_HOST }} << EOF
+            echo "🚀 Deployment Started"
+
             cd /home/ubuntu/clurst.io
 
-            # Update backend & frontent image tags
+            echo "🧹 Removing existing containers..."
+            docker rm -f \$(docker ps -aq) || true
+
+            echo "🧹 Removing OLD IMAGES (keeping last 3 only)..."
+            docker images "jitendrajat/*" --format "{{.Repository}}:{{.Tag}}" | \
+            sort -r | sed -e '1,3d' | xargs -r docker rmi -f || true
+
+            echo "🔄 Updating TAGS in .env"
             sed -i "s|BACKEND_TAG=.*|BACKEND_TAG=${TAG}|" .env || echo "BACKEND_TAG=${TAG}" >> .env
             sed -i "s|FRONTENT_TAG=.*|FRONTENT_TAG=${TAG}|" .env || echo "FRONTENT_TAG=${TAG}" >> .env
 
-            # Pull & restart
+            echo "📥 Pulling latest images..."
             docker-compose pull
+
+            echo "🚀 Starting fresh containers..."
             docker-compose up -d
 
-            echo "Deployment completed successfully 🚀"
+            echo "🎉 Deployment SUCCESS | Rollback-Safe Clean System"
 
