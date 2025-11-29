@@ -1,7 +1,16 @@
 FROM node:23-alpine
+
 WORKDIR /app
-COPY backend/package*.json ./
+
+# Copy package files from backend folder
+COPY package*.json ./
+
+# Install deps
 RUN npm ci --only=production
-COPY backend/ .
+
+# Copy entire backend source
+COPY . .
+
 EXPOSE 8000
+
 CMD ["node", "server.js"]
