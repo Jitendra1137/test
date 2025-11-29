@@ -24,17 +24,17 @@ jobs:
             echo "TAG=${GITHUB_RUN_NUMBER}-${SHORT_SHA}" >> $GITHUB_ENV
           fi
 
-      - name: Create Frontend ENV File
+      - name: Create Frontent ENV File
         run: |
-          echo "VITE_API_BASE=${{ secrets.VITE_API_BASE }}" > frontend/.env.production
-          echo "VITE_GEMINI_API_KEY=${{ secrets.VITE_GEMINI_API_KEY }}" >> frontend/.env.production
-          echo "VITE_FRONTEND_URL=${{ secrets.VITE_FRONTEND_URL }}" >> frontend/.env.production
-          echo "VITE_FIREBASE_API_KEY=${{ secrets.VITE_FIREBASE_API_KEY }}" >> frontend/.env.production
-          echo "VITE_FIREBASE_AUTH_DOMAIN=${{ secrets.VITE_FIREBASE_AUTH_DOMAIN }}" >> frontend/.env.production
-          echo "VITE_FIREBASE_PROJECT_ID=${{ secrets.VITE_FIREBASE_PROJECT_ID }}" >> frontend/.env.production
-          echo "VITE_FIREBASE_STORAGE_BUCKET=${{ secrets.VITE_FIREBASE_STORAGE_BUCKET }}" >> frontend/.env.production
-          echo "VITE_FIREBASE_MESSAGING_SENDER_ID=${{ secrets.VITE_FIREBASE_MESSAGING_SENDER_ID }}" >> frontend/.env.production
-          echo "VITE_FIREBASE_APP_ID=${{ secrets.VITE_FIREBASE_APP_ID }}" >> frontend/.env.production
+          echo "VITE_API_BASE=${{ secrets.VITE_API_BASE }}" > frontent/.env.production
+          echo "VITE_GEMINI_API_KEY=${{ secrets.VITE_GEMINI_API_KEY }}" >> frontent/.env.production
+          echo "VITE_FRONTEND_URL=${{ secrets.VITE_FRONTEND_URL }}" >> frontent/.env.production
+          echo "VITE_FIREBASE_API_KEY=${{ secrets.VITE_FIREBASE_API_KEY }}" >> frontent/.env.production
+          echo "VITE_FIREBASE_AUTH_DOMAIN=${{ secrets.VITE_FIREBASE_AUTH_DOMAIN }}" >> frontent/.env.production
+          echo "VITE_FIREBASE_PROJECT_ID=${{ secrets.VITE_FIREBASE_PROJECT_ID }}" >> frontent/.env.production
+          echo "VITE_FIREBASE_STORAGE_BUCKET=${{ secrets.VITE_FIREBASE_STORAGE_BUCKET }}" >> frontent/.env.production
+          echo "VITE_FIREBASE_MESSAGING_SENDER_ID=${{ secrets.VITE_FIREBASE_MESSAGING_SENDER_ID }}" >> frontent/.env.production
+          echo "VITE_FIREBASE_APP_ID=${{ secrets.VITE_FIREBASE_APP_ID }}" >> frontent/.env.production
 
       - name: Login to DockerHub
         run: |
@@ -44,12 +44,12 @@ jobs:
         run: docker build -t jitendrajat/backend:${{ env.TAG }} ./backend
 
       - name: Build Frontend Image
-        run: docker build -t jitendrajat/frontend:${{ env.TAG }} ./frontend
+        run: docker build -t jitendrajat/frontend:${{ env.TAG }} ./frontent
 
       - name: Push Docker Images
         run: |
           docker push jitendrajat/backend:${{ env.TAG }}
-          docker push jitendrajat/frontend:${{ env.TAG }}
+          docker push jitendrajat/frontent:${{ env.TAG }}
           docker logout
 
       - name: Setup SSH Key
