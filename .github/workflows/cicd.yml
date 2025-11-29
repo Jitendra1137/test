@@ -91,7 +91,7 @@ jobs:
           TAG: ${{ env.TAG }}
         run: |
           ssh -i ~/.ssh/id_rsa ubuntu@${{ secrets.EC2_HOST }} << EOF
-            cd /home/ubuntu/jeetu-app
+            cd /home/ubuntu/clurst.io
 
             # Update backend & frontent image tags
             sed -i "s|BACKEND_TAG=.*|BACKEND_TAG=${TAG}|" .env || echo "BACKEND_TAG=${TAG}" >> .env
