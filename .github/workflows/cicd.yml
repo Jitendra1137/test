@@ -11,9 +11,15 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      # ------------------------------------
+      # 1) Checkout Code
+      # ------------------------------------
       - name: Checkout Code
         uses: actions/checkout@v4
 
+      # ------------------------------------
+      # 2) Generate TAG for images
+      # ------------------------------------
       - name: Set TAG
         id: set_tag
         run: |
@@ -24,6 +30,9 @@ jobs:
             echo "TAG=${GITHUB_RUN_NUMBER}-${SHORT_SHA}" >> $GITHUB_ENV
           fi
 
+      # ------------------------------------
+      # 3) Create Frontent ENV File
+      # ------------------------------------
       - name: Create Frontent ENV File
         run: |
           echo "VITE_API_BASE=${{ secrets.VITE_API_BASE }}" > frontent/.env.production
@@ -36,22 +45,37 @@ jobs:
           echo "VITE_FIREBASE_MESSAGING_SENDER_ID=${{ secrets.VITE_FIREBASE_MESSAGING_SENDER_ID }}" >> frontent/.env.production
           echo "VITE_FIREBASE_APP_ID=${{ secrets.VITE_FIREBASE_APP_ID }}" >> frontent/.env.production
 
+      # ------------------------------------
+      # 4) Login to DockerHub
+      # ------------------------------------
       - name: Login to DockerHub
         run: |
-          echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
+          echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "jitendrajat" --password-stdin
 
+      # ------------------------------------
+      # 5) Build Backend Image
+      # ------------------------------------
       - name: Build Backend Image
         run: docker build -t jitendrajat/backend:${{ env.TAG }} ./backend
 
-      - name: Build Frontend Image
-        run: docker build -t jitendrajat/frontend:${{ env.TAG }} ./frontent
+      # ------------------------------------
+      # 6) Build Frontent Image
+      # ------------------------------------
+      - name: Build Frontent Image
+        run: docker build -t jitendrajat/frontent:${{ env.TAG }} ./frontent
 
+      # ------------------------------------
+      # 7) Push Images to DockerHub
+      # ------------------------------------
       - name: Push Docker Images
         run: |
           docker push jitendrajat/backend:${{ env.TAG }}
           docker push jitendrajat/frontent:${{ env.TAG }}
           docker logout
 
+      # ------------------------------------
+      # 8) Setup SSH Key
+      # ------------------------------------
       - name: Setup SSH Key
         run: |
           mkdir -p ~/.ssh
@@ -59,17 +83,23 @@ jobs:
           chmod 600 ~/.ssh/id_rsa
           ssh-keyscan -H ${{ secrets.EC2_HOST }} >> ~/.ssh/known_hosts
 
-      - name: Deploy to EC2 (Update Tags + Restart Docker)
+      # ------------------------------------
+      # 9) Deploy to EC2 (Update Tags + Restart)
+      # ------------------------------------
+      - name: Deploy to EC2 (Update tags + Restart Docker)
         env:
           TAG: ${{ env.TAG }}
         run: |
           ssh -i ~/.ssh/id_rsa ubuntu@${{ secrets.EC2_HOST }} << EOF
             cd /home/ubuntu/jeetu-app
 
+            # Update backend & frontent image tags
             sed -i "s|BACKEND_TAG=.*|BACKEND_TAG=${TAG}|" .env || echo "BACKEND_TAG=${TAG}" >> .env
-            sed -i "s|FRONTEND_TAG=.*|FRONTEND_TAG=${TAG}|" .env || echo "FRONTEND_TAG=${TAG}" >> .env
+            sed -i "s|FRONTENT_TAG=.*|FRONTENT_TAG=${TAG}|" .env || echo "FRONTENT_TAG=${TAG}" >> .env
 
+            # Pull & restart
             docker-compose pull
             docker-compose up -d
-            echo "Deployment done!"
+
+            echo "Deployment completed successfully 🚀"
 
