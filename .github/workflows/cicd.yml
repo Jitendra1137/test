@@ -24,35 +24,32 @@ jobs:
             echo "TAG=${GITHUB_RUN_NUMBER}-${SHORT_SHA}" >> $GITHUB_ENV
           fi
 
-      - name: Create Frontend ENV (.env.production)
+      - name: Create Frontend ENV File
         run: |
-          cat > frontend/.env.production <<EOF
-VITE_API_BASE=${{ secrets.VITE_API_BASE }}
-VITE_GEMINI_API_KEY=${{ secrets.VITE_GEMINI_API_KEY }}
-VITE_FRONTEND_URL=${{ secrets.VITE_FRONTEND_URL }}
-
-VITE_FIREBASE_API_KEY=${{ secrets.VITE_FIREBASE_API_KEY }}
-VITE_FIREBASE_AUTH_DOMAIN=${{ secrets.VITE_FIREBASE_AUTH_DOMAIN }}
-VITE_FIREBASE_PROJECT_ID=${{ secrets.VITE_FIREBASE_PROJECT_ID }}
-VITE_FIREBASE_STORAGE_BUCKET=${{ secrets.VITE_FIREBASE_STORAGE_BUCKET }}
-VITE_FIREBASE_MESSAGING_SENDER_ID=${{ secrets.VITE_FIREBASE_MESSAGING_SENDER_ID }}
-VITE_FIREBASE_APP_ID=${{ secrets.VITE_FIREBASE_APP_ID }}
-EOF
+          echo "VITE_API_BASE=${{ secrets.VITE_API_BASE }}" > frontend/.env.production
+          echo "VITE_GEMINI_API_KEY=${{ secrets.VITE_GEMINI_API_KEY }}" >> frontend/.env.production
+          echo "VITE_FRONTEND_URL=${{ secrets.VITE_FRONTEND_URL }}" >> frontend/.env.production
+          echo "VITE_FIREBASE_API_KEY=${{ secrets.VITE_FIREBASE_API_KEY }}" >> frontend/.env.production
+          echo "VITE_FIREBASE_AUTH_DOMAIN=${{ secrets.VITE_FIREBASE_AUTH_DOMAIN }}" >> frontend/.env.production
+          echo "VITE_FIREBASE_PROJECT_ID=${{ secrets.VITE_FIREBASE_PROJECT_ID }}" >> frontend/.env.production
+          echo "VITE_FIREBASE_STORAGE_BUCKET=${{ secrets.VITE_FIREBASE_STORAGE_BUCKET }}" >> frontend/.env.production
+          echo "VITE_FIREBASE_MESSAGING_SENDER_ID=${{ secrets.VITE_FIREBASE_MESSAGING_SENDER_ID }}" >> frontend/.env.production
+          echo "VITE_FIREBASE_APP_ID=${{ secrets.VITE_FIREBASE_APP_ID }}" >> frontend/.env.production
 
       - name: Login to DockerHub
         run: |
           echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
 
       - name: Build Backend Image
-        run: docker build -t DOCKER_USERNAME/backend:${{ env.TAG }} ./backend
+        run: docker build -t jitendrajat/backend:${{ env.TAG }} ./backend
 
       - name: Build Frontend Image
-        run: docker build -t DOCKER_USERNAME/frontend:${{ env.TAG }} ./frontend
+        run: docker build -t jitendrajat/frontend:${{ env.TAG }} ./frontend
 
       - name: Push Docker Images
         run: |
-          docker push DOCKER_USERNAME/backend:${{ env.TAG }}
-          docker push DOCKER_USERNAME/frontend:${{ env.TAG }}
+          docker push jitendrajat/backend:${{ env.TAG }}
+          docker push jitendrajat/frontend:${{ env.TAG }}
           docker logout
 
       - name: Setup SSH Key
@@ -62,18 +59,17 @@ EOF
           chmod 600 ~/.ssh/id_rsa
           ssh-keyscan -H ${{ secrets.EC2_HOST }} >> ~/.ssh/known_hosts
 
-      - name: Deploy on EC2 (Update tags + Restart Docker)
+      - name: Deploy to EC2 (Update Tags + Restart Docker)
         env:
           TAG: ${{ env.TAG }}
         run: |
-          ssh -i ~/.ssh/id_rsa ubuntu@${{ secrets.EC2_HOST }} << 'EOF'
-            cd /home/ubuntu/clurst.io
+          ssh -i ~/.ssh/id_rsa ubuntu@${{ secrets.EC2_HOST }} << EOF
+            cd /home/ubuntu/jeetu-app
 
             sed -i "s|BACKEND_TAG=.*|BACKEND_TAG=${TAG}|" .env || echo "BACKEND_TAG=${TAG}" >> .env
             sed -i "s|FRONTEND_TAG=.*|FRONTEND_TAG=${TAG}|" .env || echo "FRONTEND_TAG=${TAG}" >> .env
 
             docker-compose pull
             docker-compose up -d
-
-            echo "Deployment completed successfully (NO HEALTHCHECK)"
+            echo "Deployment done!"
 EOF
